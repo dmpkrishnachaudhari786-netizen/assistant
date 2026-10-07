@@ -1,24 +1,27 @@
 # Assistant
 
-A dark, voice-enabled assistant web app (PWA) with **four AI providers**, photo attach and image generation.
+A dark, voice-enabled assistant web app (PWA): four AI providers, photo attach, image mode,
+login, chat history and Google Drive export.
 
 ## Features
-- Dark theme + spark logo
-- **Providers:** Gemini (Google), Sarvam AI, DeepSeek, Kimi (Moonshot) - pick one, paste its API key
-- **Photo attach:** attach an image and ask about it
-- **Image mode:** turn it on and your message is generated as an image (needs a model that supports IMAGE responses)
-- **Voice:** replies spoken aloud when the toggle is on (Web Speech API)
-- Settings saved on your device only; installable PWA; app shell works offline
+- **Providers:** Gemini (Google), Sarvam AI, DeepSeek, Kimi (Moonshot)
+- **Photo attach** and **Image mode** (image generation)
+- **Voice** (speaks replies), **Settings**
+- **Login / logout** - a LOCAL profile stored on this device only (see below)
+- **Chat history** - saved conversations: new, open, delete, export
+- **Export** chats to a JSON file, or upload to **Google Drive** (needs your OAuth Client ID)
+- Installable PWA; app shell works offline
 
 ## Honest limitations
-- **Screen control is not possible in a web app.** Controlling your phone's screen needs a native
-  Android app with an AccessibilityService - a browser/PWA cannot do it.
-- The API key is stored on your device and used directly from the browser. Some providers may block
-  browser calls (CORS), and for anything public you should route through a small server.
-- Provider base URLs are prefilled best-effort; if a provider's endpoint differs, edit it in Settings.
-- Image generation depends on the chosen model supporting image output.
+- **Login is a local profile, not real authentication.** Real login needs an auth provider
+  (e.g. Supabase). The app says this on the Account screen.
+- **Google Drive upload needs YOUR Google OAuth Client ID** (Google Cloud -> OAuth Client ID,
+  enable Drive API, add this site as an allowed origin). Without it, use "Download chats file".
+- **Screen control is not possible in a web app** (needs a native Android app).
+- API keys are stored on your device and used from the browser; some providers may block browser
+  calls (CORS). For public use, route through a small server.
 
 ## Tested
-Real-browser checks (12/12): loads with logo + provider pill, four providers listed, switching provider
-updates model/base URL, per-provider key saved, honest "add key" message (no fake reply), photo attach
-thumbnail, image-mode toggle, service worker, and no console errors.
+Real-browser checks (16/16): loads, account view, honest local-profile warning, login, logout,
+honest "add key" reply, chat saved to history with a title, new chat, open a chat, four providers,
+per-provider key save, export, service worker, no console errors.

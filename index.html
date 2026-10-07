@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Assistant</title>
-<meta name="description" content="A dark, voice-enabled assistant PWA with Gemini, Sarvam, DeepSeek and Kimi, photo attach and image generation.">
+<meta name="description" content="Dark voice assistant PWA with 4 AI providers, photo attach, image mode, login, chat history and Google Drive export.">
 <meta name="theme-color" content="#05060d">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,22 +16,23 @@
   html,body{margin:0;height:100%}
   body{background:radial-gradient(900px 600px at 50% -10%,#141a33 0%,var(--bg) 60%) fixed,var(--bg);
     color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;display:flex;flex-direction:column}
-  header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);background:rgba(5,6,13,.72);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
-  .logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex:none}
-  .logo svg{width:19px;height:19px}
+  header{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:rgba(5,6,13,.75);backdrop-filter:blur(10px);position:sticky;top:0;z-index:5}
+  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex:none}
+  .logo svg{width:18px;height:18px}
   .title{font-weight:700;flex:1}
-  .pill{background:#0b1220;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:5px 10px;font-size:.75rem}
-  .gear{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 11px;font-size:.82rem;cursor:pointer}
+  .pill{background:#0b1220;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:4px 9px;font-size:.72rem}
+  .gear{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 10px;font-size:.8rem;cursor:pointer}
   .gear:hover{border-color:var(--accent)}
   main{flex:1;overflow-y:auto;padding:14px;max-width:640px;width:100%;margin:0 auto}
+  .view{display:none} .view.show{display:block}
   .msg{max-width:86%;padding:11px 14px;border-radius:14px;margin:8px 0;font-size:.95rem;white-space:pre-wrap;word-wrap:break-word}
   .me{background:linear-gradient(135deg,var(--accent),#5b46c9);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
   .bot{background:var(--panel);border:1px solid var(--border);border-bottom-left-radius:4px}
   .sys{color:var(--muted);font-size:.82rem;text-align:center;margin:10px 0}
   .msg img{max-width:100%;border-radius:10px;margin-top:6px;display:block}
-  footer{padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:rgba(5,6,13,.78);backdrop-filter:blur(10px)}
-  .attachRow{max-width:640px;margin:0 auto 8px;display:flex;align-items:center;gap:8px}
-  .thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
+  footer{padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:rgba(5,6,13,.8);backdrop-filter:blur(10px)}
+  .attachRow{max-width:640px;margin:0 auto 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .thumb{width:42px;height:42px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
   .chip{border:1px solid var(--border);background:#0b1220;color:var(--text);border-radius:999px;padding:6px 12px;font-size:.78rem;cursor:pointer}
   .chip[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
   .compose{display:flex;gap:8px;max-width:640px;margin:0 auto}
@@ -39,7 +40,10 @@
   input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .send{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04121f;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
   .send:disabled{opacity:.5}
-  .iconbtn{background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px 14px;cursor:pointer}
+  .iconbtn{background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:11px 13px;cursor:pointer}
+  .listItem{display:flex;align-items:center;gap:10px;background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px}
+  .listItem .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .listItem .m{font-size:.75rem;color:var(--muted)}
   .sheet{position:fixed;inset:0;background:rgba(3,4,10,.72);backdrop-filter:blur(4px);display:none;z-index:20;align-items:flex-end}
   .sheet.show{display:flex}
   .sheet .inner{background:var(--bg2);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:640px;margin:0 auto;padding:18px;max-height:90vh;overflow-y:auto}
@@ -62,16 +66,35 @@
 </head>
 <body>
 <header>
-  <span class="logo" aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l1.9 5.4L19 9l-5.1 1.6L12 16l-1.9-5.4L5 9l5.1-1.6L12 2z" fill="#fff"/><circle cx="18.5" cy="17.5" r="2.2" fill="#fff" opacity=".85"/></svg>
-  </span>
+  <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2l1.9 5.4L19 9l-5.1 1.6L12 16l-1.9-5.4L5 9l5.1-1.6L12 2z" fill="#fff"/><circle cx="18.5" cy="17.5" r="2.2" fill="#fff" opacity=".85"/></svg></span>
   <div class="title">Assistant</div>
   <span class="pill" id="providerPill">Gemini</span>
-  <button class="gear" id="gearBtn" type="button">Settings</button>
+  <button class="gear" id="historyBtn" type="button" title="Chat history">Chats</button>
+  <button class="gear" id="accountBtn" type="button" title="Account">Account</button>
+  <button class="gear" id="gearBtn" type="button" title="Settings">⚙</button>
 </header>
 
-<main id="chat" aria-live="polite">
-  <div class="sys">Ask anything. Add an API key in Settings to enable AI replies. You can attach a photo, or turn on Image mode to generate one.</div>
+<main>
+  <!-- CHAT VIEW -->
+  <section class="view show" id="viewChat" aria-live="polite">
+    <div class="sys">Ask anything. Add an API key in Settings to enable AI replies. Attach a photo, or turn on Image mode.</div>
+  </section>
+
+  <!-- HISTORY VIEW -->
+  <section class="view" id="viewHistory">
+    <h2 style="margin-top:0">Chat history</h2>
+    <div class="row" style="margin-top:0">
+      <button class="primary" id="newChatBtn" type="button">New chat</button>
+      <button class="ghost" id="exportBtn" type="button">Export all</button>
+    </div>
+    <div id="chatList" style="margin-top:14px"></div>
+  </section>
+
+  <!-- ACCOUNT VIEW -->
+  <section class="view" id="viewAccount">
+    <h2 style="margin-top:0">Account</h2>
+    <div id="accountBox"></div>
+  </section>
 </main>
 
 <footer>
@@ -100,18 +123,14 @@
     </select>
     <label for="keyInput">API key</label>
     <input id="keyInput" type="password" placeholder="paste your key" autocomplete="off">
-    <div class="hint">Saved only on this device. Get keys: Gemini → aistudio.google.com/apikey; others → your provider's dashboard.</div>
     <label for="modelInput">Model</label>
     <input id="modelInput" type="text" placeholder="model id">
-    <label for="baseInput">Base URL (for OpenAI-compatible providers)</label>
+    <label for="baseInput">Base URL (OpenAI-compatible providers)</label>
     <input id="baseInput" type="text" placeholder="https://...">
     <div class="toggleRow"><span>Speak replies (voice)</span>
       <button class="switch" id="voiceSwitch" role="switch" aria-checked="false" aria-label="Speak replies"></button></div>
     <div id="keyState"></div>
-    <div class="warn"><b>Screen control:</b> a web app cannot control your phone's screen. That needs a native Android app (AccessibilityService) — not possible here.</div>
-    <div class="warn" style="background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#fcd34d">
-      Browser calls to some providers may be blocked by CORS, and the key is used from your browser. For public use, route through a small server.
-    </div>
+    <div class="warn"><b>Screen control:</b> a web app cannot control your phone's screen (needs a native Android app). Not possible here.</div>
     <div class="row"><button class="ghost" id="closeSheet" type="button">Close</button><button class="primary" id="saveSheet" type="button">Save</button></div>
   </div>
 </div>
@@ -119,139 +138,204 @@
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const STORE = "assistant.v2";
+const STORE = "assistant.v3";
 const PROVIDERS = {
   gemini:   { name:"Gemini",   kind:"gemini", base:"https://generativelanguage.googleapis.com/v1beta", model:"gemini-2.5-flash" },
   sarvam:   { name:"Sarvam AI",kind:"openai", base:"https://api.sarvam.ai/v1", model:"sarvam-m" },
   deepseek: { name:"DeepSeek", kind:"openai", base:"https://api.deepseek.com/v1", model:"deepseek-chat" },
   kimi:     { name:"Kimi",     kind:"openai", base:"https://api.moonshot.ai/v1", model:"moonshot-v1-8k" },
 };
-let S = { provider:"gemini", keys:{}, models:{}, bases:{}, voice:false };
-let attached = null;   // { dataUrl, mime, name }
-let imageMode = false;
+let S = { provider:"gemini", keys:{}, models:{}, bases:{}, voice:false,
+          profile:{ name:"", pin:"", loggedIn:false }, chats:[], current:null, driveClientId:"" };
+let attached=null, imageMode=false;
 
 function load(){ try{ const d=JSON.parse(localStorage.getItem(STORE)||"{}"); S={...S,...d}; }catch(e){} }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
-const cur = () => PROVIDERS[S.provider];
-const curKey = () => S.keys[S.provider] || "";
-const curModel = () => S.models[S.provider] || cur().model;
-const curBase = () => S.bases[S.provider] || cur().base;
+const cur=()=>PROVIDERS[S.provider];
+const curKey=()=>S.keys[S.provider]||"";
+const curModel=()=>S.models[S.provider]||cur().model;
+const curBase=()=>S.bases[S.provider]||cur().base;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 
-function bubble(text, who){ const d=document.createElement("div"); d.className="msg "+who; d.textContent=text; $("chat").appendChild(d); $("chat").scrollTop=$("chat").scrollHeight; return d; }
-function speak(t){ if(!S.voice || !("speechSynthesis" in window)) return; try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t)); }catch(e){} }
-function dataUrlToBase64(u){ return u.split(",")[1] || ""; }
-
-/* ---- AI calls ---- */
-async function callGemini(text, img){
-  const parts = [];
-  if(text) parts.push({text});
-  if(img) parts.push({inline_data:{ mime_type:img.mime, data:dataUrlToBase64(img.dataUrl) }});
-  const url = curBase()+"/models/"+encodeURIComponent(curModel())+":generateContent?key="+encodeURIComponent(curKey());
-  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ contents:[{ role:"user", parts }] }) });
-  if(!res.ok) throw new Error("Gemini API error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
-  const d = await res.json();
-  const ps = d?.candidates?.[0]?.content?.parts || [];
-  return ps.map(p=>p.text||"").join("").trim() || "(no reply)";
+/* ---------- chat store ---------- */
+function newChat(){ const c={ id:uid(), title:"New chat", msgs:[], at:new Date().toISOString() }; S.chats.unshift(c); S.current=c.id; save(); renderChat(); return c; }
+function currentChat(){ let c=S.chats.find(x=>x.id===S.current); if(!c) c=newChat(); return c; }
+function renderChat(){
+  const box=$("viewChat"); box.innerHTML='<div class="sys">Ask anything. Add an API key in Settings to enable AI replies. Attach a photo, or turn on Image mode.</div>';
+  const c=currentChat();
+  c.msgs.forEach(m=>box.appendChild(msgEl(m)));
+  box.scrollTop=box.scrollHeight;
 }
-async function callOpenAI(text, img){
-  const content = [{type:"text", text: text || "Describe this image."}];
-  if(img) content.push({type:"image_url", image_url:{ url: img.dataUrl }});
-  const res = await fetch(curBase()+"/chat/completions", { method:"POST",
-    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+curKey() },
-    body: JSON.stringify({ model: curModel(), messages:[{ role:"user", content }] }) });
-  if(!res.ok) throw new Error(cur().name+" API error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
-  const d = await res.json();
-  return d?.choices?.[0]?.message?.content?.trim() || "(no reply)";
+function msgEl(m){
+  const d=document.createElement("div"); d.className="msg "+(m.who==="me"?"me":(m.who==="sys"?"sys":"bot"));
+  d.textContent=m.text||"";
+  if(m.img){ const im=document.createElement("img"); im.src=m.img; im.alt=""; d.appendChild(im); }
+  return d;
+}
+function push(who, text, img){
+  const c=currentChat(); const m={who,text,img}; c.msgs.push(m); c.at=new Date().toISOString();
+  if(c.title==="New chat" && who==="me" && text){ c.title=text.slice(0,32); }
+  save(); $("viewChat").appendChild(msgEl(m)); $("viewChat").scrollTop=$("viewChat").scrollHeight;
+  return m;
+}
+
+/* ---------- AI ---------- */
+function speak(t){ if(!S.voice || !("speechSynthesis" in window)) return; try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t)); }catch(e){} }
+const b64 = u => (u.split(",")[1]||"");
+async function callGemini(text,img){
+  const parts=[]; if(text) parts.push({text}); if(img) parts.push({inline_data:{mime_type:img.mime,data:b64(img.dataUrl)}});
+  const url=curBase()+"/models/"+encodeURIComponent(curModel())+":generateContent?key="+encodeURIComponent(curKey());
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{role:"user",parts}]})});
+  if(!res.ok) throw new Error("Gemini error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
+  const d=await res.json(); return (d?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("").trim()||"(no reply)";
+}
+async function callOpenAI(text,img){
+  const content=[{type:"text",text:text||"Describe this image."}]; if(img) content.push({type:"image_url",image_url:{url:img.dataUrl}});
+  const res=await fetch(curBase()+"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+curKey()},
+    body:JSON.stringify({model:curModel(),messages:[{role:"user",content}]})});
+  if(!res.ok) throw new Error(cur().name+" error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
+  const d=await res.json(); return d?.choices?.[0]?.message?.content?.trim()||"(no reply)";
 }
 async function generateImage(prompt){
-  // Gemini image generation (model must support IMAGE responses)
-  const model = curModel();
-  const url = curBase()+"/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(curKey());
-  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ contents:[{ role:"user", parts:[{text:prompt}] }],
-      generationConfig:{ responseModalities:["TEXT","IMAGE"] } }) });
-  if(!res.ok) throw new Error("Image API error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
-  const d = await res.json();
-  const ps = d?.candidates?.[0]?.content?.parts || [];
-  const imgPart = ps.find(p => p.inlineData || p.inline_data);
-  if(!imgPart) throw new Error("No image returned — the model may not support image generation. Try an image model.");
-  const data = imgPart.inlineData || imgPart.inline_data;
+  const url=curBase()+"/models/"+encodeURIComponent(curModel())+":generateContent?key="+encodeURIComponent(curKey());
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{responseModalities:["TEXT","IMAGE"]}})});
+  if(!res.ok) throw new Error("Image error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
+  const d=await res.json(); const ps=d?.candidates?.[0]?.content?.parts||[];
+  const ip=ps.find(p=>p.inlineData||p.inline_data);
+  if(!ip) throw new Error("No image returned — the model may not support image generation.");
+  const data=ip.inlineData||ip.inline_data;
   return "data:"+(data.mimeType||data.mime_type||"image/png")+";base64,"+data.data;
 }
-
 async function send(){
-  const el=$("input"); const text=el.value.trim();
-  if(!text && !attached) return;
+  const el=$("input"); const text=el.value.trim(); if(!text && !attached) return;
   el.value="";
-  const mine = bubble(text || (attached? "[photo]" : ""), "me");
-  if(attached){ const im=document.createElement("img"); im.src=attached.dataUrl; im.alt="attached"; mine.appendChild(im); }
-  const img = attached; attached=null; clearThumb();
-  $("sendBtn").disabled=true;
-  const thinking = bubble(imageMode ? "…generating" : "…", "bot");
+  push("me", text||(attached?"[photo]":""), attached?attached.dataUrl:null);
+  const img=attached; attached=null; clearThumb();
+  $("sendBtn").disabled=true; const t=push("bot","…");
   try{
-    if(!curKey()){ thinking.textContent = "⚠️ Add your "+cur().name+" API key in Settings to enable AI replies."; }
-    else if(imageMode){
-      const url = await generateImage(text);
-      thinking.textContent = "Here is your image:"; const im=document.createElement("img"); im.src=url; im.alt="generated"; thinking.appendChild(im);
-    } else {
-      const reply = cur().kind==="gemini" ? await callGemini(text, img) : await callOpenAI(text, img);
-      thinking.textContent = reply; speak(reply);
-    }
-  }catch(e){ thinking.textContent = "⚠️ "+e.message; }
-  finally{ $("sendBtn").disabled=false; $("chat").scrollTop=$("chat").scrollHeight; }
+    if(!curKey()){ t.text="⚠️ Add your "+cur().name+" API key in Settings to enable AI replies."; save(); }
+    else if(imageMode){ const url=await generateImage(text); t.text="Here is your image:"; t.img=url; save(); renderChat(); }
+    else { const reply=cur().kind==="gemini"?await callGemini(text,img):await callOpenAI(text,img); t.text=reply; speak(reply); save(); }
+  }catch(e){ t.text="⚠️ "+e.message; save(); }
+  finally{ $("sendBtn").disabled=false; renderChat(); }
 }
 
-/* ---- attach ---- */
+/* ---------- views ---------- */
+function show(view){ ["viewChat","viewHistory","viewAccount"].forEach(v=>$(v).classList.toggle("show", v===view)); }
+$("historyBtn").addEventListener("click", ()=>{ renderHistory(); show("viewHistory"); });
+$("accountBtn").addEventListener("click", ()=>{ renderAccount(); show("viewAccount"); });
+
+/* ---------- history ---------- */
+function renderHistory(){
+  const box=$("chatList"); box.innerHTML="";
+  if(!S.chats.length){ box.innerHTML='<div class="sys">No chats yet.</div>'; return; }
+  S.chats.forEach(c=>{
+    const d=document.createElement("div"); d.className="listItem";
+    d.innerHTML='<div class="t"><div>'+esc(c.title)+'</div><div class="m">'+c.msgs.length+' messages · '+new Date(c.at).toLocaleString()+'</div></div>';
+    const open=document.createElement("button"); open.className="chip"; open.textContent="Open"; open.onclick=()=>{ S.current=c.id; save(); renderChat(); show("viewChat"); };
+    const del=document.createElement("button"); del.className="chip"; del.textContent="Delete"; del.onclick=()=>{ S.chats=S.chats.filter(x=>x.id!==c.id); if(S.current===c.id) S.current=null; save(); renderHistory(); };
+    d.appendChild(open); d.appendChild(del); box.appendChild(d);
+  });
+}
+$("newChatBtn").addEventListener("click", ()=>{ newChat(); show("viewChat"); });
+$("exportBtn").addEventListener("click", ()=> exportChats());
+function exportChats(){
+  const blob=new Blob([JSON.stringify(S.chats,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="assistant-chats-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- account ---------- */
+function renderAccount(){
+  const b=$("accountBox");
+  if(!S.profile.loggedIn){
+    b.innerHTML =
+      '<div class="warn">This is a <b>local profile</b> stored on this device only — it is <b>not real authentication</b>. Real login needs an auth provider (e.g. Supabase).</div>'+
+      '<label for="nameInput">Name</label><input id="nameInput" type="text" placeholder="Your name" value="'+esc(S.profile.name)+'">'+
+      '<label for="pinInput">PIN (optional)</label><input id="pinInput" type="password" placeholder="4+ digits" inputmode="numeric">'+
+      '<div class="row"><button class="primary" id="loginBtn" type="button">Log in</button></div>';
+    $("loginBtn").onclick=()=>{
+      const n=$("nameInput").value.trim(); const p=$("pinInput").value.trim();
+      if(!n){ return; }
+      S.profile={ name:n, pin:p, loggedIn:true }; save(); renderAccount();
+    };
+  }else{
+    b.innerHTML =
+      '<div class="ok">Logged in as <b>'+esc(S.profile.name)+'</b> (local profile)</div>'+
+      '<label for="driveInput">Google OAuth Client ID (for Google Drive)</label>'+
+      '<input id="driveInput" type="text" placeholder="xxxxx.apps.googleusercontent.com" value="'+esc(S.driveClientId)+'">'+
+      '<div class="hint">Create an OAuth Client ID (Web) in Google Cloud, enable the Drive API, and add this site as an allowed origin. Then this button uploads your chats to Drive.</div>'+
+      '<div class="row"><button class="primary" id="driveBtn" type="button">Save chats to Google Drive</button></div>'+
+      '<div class="row"><button class="ghost" id="exportBtn2" type="button">Download chats file</button></div>'+
+      '<div class="row"><button class="ghost" id="logoutBtn" type="button">Log out</button></div>'+
+      '<div id="driveState"></div>';
+    $("driveInput").onchange=e=>{ S.driveClientId=e.target.value.trim(); save(); };
+    $("exportBtn2").onclick=()=> exportChats();
+    $("driveBtn").onclick=()=> uploadToDrive();
+    $("logoutBtn").onclick=()=>{ S.profile.loggedIn=false; save(); renderAccount(); };
+  }
+}
+function loadGIS(){ return new Promise((res,rej)=>{ if(window.google&&google.accounts) return res();
+  const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.onload=()=>res(); s.onerror=()=>rej(new Error("Could not load Google sign-in")); document.head.appendChild(s); }); }
+async function uploadToDrive(){
+  const st=$("driveState");
+  if(!S.driveClientId){ st.innerHTML='<div class="warn">Add your Google OAuth Client ID first.</div>'; return; }
+  st.innerHTML='<div class="hint">Connecting to Google…</div>';
+  try{
+    await loadGIS();
+    const token = await new Promise((res,rej)=>{
+      const tc=google.accounts.oauth2.initTokenClient({ client_id:S.driveClientId,
+        scope:"https://www.googleapis.com/auth/drive.file",
+        callback:(r)=>{ if(r && r.access_token) res(r.access_token); else rej(new Error("No token")); } });
+      tc.requestAccessToken();
+    });
+    const body=JSON.stringify(S.chats,null,2);
+    const meta={ name:"assistant-chats-"+new Date().toISOString().slice(0,10)+".json", mimeType:"application/json" };
+    const form=new FormData(); form.append("metadata", new Blob([JSON.stringify(meta)],{type:"application/json"})); form.append("file", new Blob([body],{type:"application/json"}));
+    const res=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",{method:"POST",headers:{Authorization:"Bearer "+token},body:form});
+    if(!res.ok) throw new Error("Drive upload failed "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,120));
+    const f=await res.json();
+    st.innerHTML='<div class="ok">Saved to Google Drive (file id '+f.id+').</div>';
+  }catch(e){ st.innerHTML='<div class="warn">'+esc(e.message)+'</div>'; }
+}
+
+/* ---------- attach + image mode ---------- */
 function clearThumb(){ $("thumb").hidden=true; $("thumb").removeAttribute("src"); $("attachName").textContent=""; }
 $("attachBtn").addEventListener("click", ()=> $("fileInput").click());
 $("fileInput").addEventListener("change", e=>{
   const f=e.target.files[0]; if(!f) return;
-  if(!/^image\//.test(f.type)){ bubble("Only images can be attached.", "sys"); return; }
-  const r=new FileReader();
-  r.onload=()=>{ attached={ dataUrl:r.result, mime:f.type, name:f.name };
-    $("thumb").src=r.result; $("thumb").hidden=false; $("attachName").textContent=f.name.slice(0,18); };
+  if(!/^image\//.test(f.type)){ push("sys","Only images can be attached."); return; }
+  const r=new FileReader(); r.onload=()=>{ attached={dataUrl:r.result,mime:f.type,name:f.name}; $("thumb").src=r.result; $("thumb").hidden=false; $("attachName").textContent=f.name.slice(0,18); };
   r.readAsDataURL(f);
 });
-$("imageModeBtn").addEventListener("click", ()=>{
-  imageMode = !imageMode;
-  $("imageModeBtn").setAttribute("aria-pressed", imageMode ? "true":"false");
-  bubble(imageMode ? "Image mode ON — your next message will be generated as an image." : "Image mode OFF.", "sys");
-});
+$("imageModeBtn").addEventListener("click", ()=>{ imageMode=!imageMode; $("imageModeBtn").setAttribute("aria-pressed", imageMode?"true":"false"); push("sys", imageMode?"Image mode ON — your next message is generated as an image.":"Image mode OFF."); });
 
-/* ---- settings ---- */
-function fillForm(){
-  $("providerSel").value = S.provider;
-  $("keyInput").value = curKey();
-  $("modelInput").value = curModel();
-  $("baseInput").value = curBase();
-  $("voiceSwitch").setAttribute("aria-checked", S.voice ? "true":"false");
-  $("keyState").innerHTML = curKey() ? '<div class="ok">'+cur().name+' key saved on this device.</div>'
-                                     : '<div class="warn">No key for '+cur().name+' — AI replies are disabled.</div>';
-}
+/* ---------- settings ---------- */
+function fillForm(){ $("providerSel").value=S.provider; $("keyInput").value=curKey(); $("modelInput").value=curModel(); $("baseInput").value=curBase();
+  $("voiceSwitch").setAttribute("aria-checked", S.voice?"true":"false");
+  $("keyState").innerHTML = curKey() ? '<div class="ok">'+cur().name+' key saved on this device.</div>' : '<div class="warn">No key for '+cur().name+' — AI replies are disabled.</div>'; }
 $("gearBtn").addEventListener("click", ()=>{ fillForm(); $("sheet").classList.add("show"); });
-$("providerSel").addEventListener("change", ()=>{ // save current, then show new provider's values
-  S.provider=$("providerSel").value;
-  S.keys[S.provider]=$("keyInput").value.trim()===curKey()?S.keys[S.provider]||"":$("keyInput").value.trim();
-  fillForm();
-});
+$("providerSel").addEventListener("change", ()=>{ S.provider=$("providerSel").value; fillForm(); });
 $("closeSheet").addEventListener("click", ()=> $("sheet").classList.remove("show"));
 $("sheet").addEventListener("click", e=>{ if(e.target===$("sheet")) $("sheet").classList.remove("show"); });
 $("voiceSwitch").addEventListener("click", ()=>{ const on=$("voiceSwitch").getAttribute("aria-checked")==="true"; $("voiceSwitch").setAttribute("aria-checked", on?"false":"true"); });
 $("saveSheet").addEventListener("click", ()=>{
-  S.provider=$("providerSel").value;
-  S.keys[S.provider]=$("keyInput").value.trim();
-  S.models[S.provider]=$("modelInput").value.trim();
-  S.bases[S.provider]=$("baseInput").value.trim();
+  S.provider=$("providerSel").value; S.keys[S.provider]=$("keyInput").value.trim();
+  S.models[S.provider]=$("modelInput").value.trim(); S.bases[S.provider]=$("baseInput").value.trim();
   S.voice=$("voiceSwitch").getAttribute("aria-checked")==="true";
   save(); $("providerPill").textContent=cur().name; $("sheet").classList.remove("show");
-  bubble(S.keys[S.provider] ? cur().name+" saved. AI is enabled." : cur().name+" saved. Add a key to enable AI.", "sys");
+  push("sys", S.keys[S.provider]? cur().name+" saved. AI is enabled." : cur().name+" saved. Add a key to enable AI.");
 });
 $("sendBtn").addEventListener("click", send);
 $("input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
 
+/* ---------- boot ---------- */
 load();
-$("providerPill").textContent = cur().name;
+$("providerPill").textContent=cur().name;
+if(!S.chats.length) newChat(); else renderChat();
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   window.addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
