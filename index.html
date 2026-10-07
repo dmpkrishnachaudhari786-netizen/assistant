@@ -37,6 +37,7 @@
   .chip[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
   .compose{display:flex;gap:8px;max-width:640px;margin:0 auto}
   input[type=text],input[type=password],select{flex:1;background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px;font-size:1rem;min-width:0}
+textarea{width:100%;background:#0b1220;border:1px solid var(--border);color:var(--text);border-radius:12px;padding:12px;font-size:.9rem;font-family:inherit;resize:vertical}
   input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .send{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04121f;border:none;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
   .send:disabled{opacity:.5}
@@ -129,6 +130,8 @@
     <input id="baseInput" type="text" placeholder="https://...">
     <div class="toggleRow"><span>Speak replies (voice)</span>
       <button class="switch" id="voiceSwitch" role="switch" aria-checked="false" aria-label="Speak replies"></button></div>
+    <label for="personaInput">Persona - how the AI talks to you</label>
+    <textarea id="personaInput" rows="6" placeholder="personality / system prompt"></textarea>
     <div id="keyState"></div>
     <div class="warn"><b>Screen control:</b> a web app cannot control your phone's screen (needs a native Android app). Not possible here.</div>
     <div class="row"><button class="ghost" id="closeSheet" type="button">Close</button><button class="primary" id="saveSheet" type="button">Save</button></div>
@@ -145,7 +148,8 @@ const PROVIDERS = {
   deepseek: { name:"DeepSeek", kind:"openai", base:"https://api.deepseek.com/v1", model:"deepseek-chat" },
   kimi:     { name:"Kimi",     kind:"openai", base:"https://api.moonshot.ai/v1", model:"moonshot-v1-8k" },
 };
-let S = { provider:"gemini", keys:{}, models:{}, bases:{}, voice:false,
+const DEFAULT_PERSONA = "You are a conversational AI with this personality: 50% savage roast, 20% dark humour, 15% chill friend, 15% philosopher. Talk naturally - never robotic or formal. Be chill, confident, witty, sarcastic, unpredictable, sometimes brutally honest, but never toxic or cruel. Roast the user's habits and contradictions (personalised, not generic) to make them laugh and give a reality check - never to humiliate them. Use clever, intelligent dark humour (irony, existential jokes, tech / school / adult-life absurdity) - cleverness over shock, never graphic. When asked about life, success, failure, friendship, time, ambition, loneliness or discipline, go deeper than quotes: bring psychology, philosophy, human nature, logic and practical reality, and use paradoxes or thought experiments. Pattern: ROAST -> INSIGHT -> SOLUTION. If the user roasts you, counter-roast cleverly; never get defensive. Do not force a roast into every reply - vary the tone (serious, philosophical, savage, wholesome, absurd). Zero-bullshit honesty: if the user is wrong or the idea is bad, say so plainly, but never confuse honesty with insult. Reply in the user's language (Hindi/Hinglish in, same out). Be confident when sure; clearly say so when unsure. Signature vibe: laughter, a roast, and something to think about.";
+let S = { provider:"gemini", keys:{}, models:{}, bases:{}, voice:false, persona:DEFAULT_PERSONA,
           profile:{ name:"", pin:"", loggedIn:false }, chats:[], current:null, driveClientId:"" };
 let attached=null, imageMode=false;
 
@@ -185,14 +189,14 @@ const b64 = u => (u.split(",")[1]||"");
 async function callGemini(text,img){
   const parts=[]; if(text) parts.push({text}); if(img) parts.push({inline_data:{mime_type:img.mime,data:b64(img.dataUrl)}});
   const url=curBase()+"/models/"+encodeURIComponent(curModel())+":generateContent?key="+encodeURIComponent(curKey());
-  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{role:"user",parts}]})});
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:S.persona||""}]},contents:[{role:"user",parts}]})});
   if(!res.ok) throw new Error("Gemini error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
   const d=await res.json(); return (d?.candidates?.[0]?.content?.parts||[]).map(p=>p.text||"").join("").trim()||"(no reply)";
 }
 async function callOpenAI(text,img){
   const content=[{type:"text",text:text||"Describe this image."}]; if(img) content.push({type:"image_url",image_url:{url:img.dataUrl}});
   const res=await fetch(curBase()+"/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+curKey()},
-    body:JSON.stringify({model:curModel(),messages:[{role:"user",content}]})});
+    body:JSON.stringify({model:curModel(),messages:[{role:"system",content:S.persona||""},{role:"user",content}]})});
   if(!res.ok) throw new Error(cur().name+" error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
   const d=await res.json(); return d?.choices?.[0]?.message?.content?.trim()||"(no reply)";
 }
@@ -314,7 +318,7 @@ $("fileInput").addEventListener("change", e=>{
 $("imageModeBtn").addEventListener("click", ()=>{ imageMode=!imageMode; $("imageModeBtn").setAttribute("aria-pressed", imageMode?"true":"false"); push("sys", imageMode?"Image mode ON — your next message is generated as an image.":"Image mode OFF."); });
 
 /* ---------- settings ---------- */
-function fillForm(){ $("providerSel").value=S.provider; $("keyInput").value=curKey(); $("modelInput").value=curModel(); $("baseInput").value=curBase();
+function fillForm(){ $("providerSel").value=S.provider; $("keyInput").value=curKey(); $("modelInput").value=curModel(); $("baseInput").value=curBase(); $("personaInput").value=S.persona||DEFAULT_PERSONA;
   $("voiceSwitch").setAttribute("aria-checked", S.voice?"true":"false");
   $("keyState").innerHTML = curKey() ? '<div class="ok">'+cur().name+' key saved on this device.</div>' : '<div class="warn">No key for '+cur().name+' — AI replies are disabled.</div>'; }
 $("gearBtn").addEventListener("click", ()=>{ fillForm(); $("sheet").classList.add("show"); });
@@ -326,6 +330,7 @@ $("saveSheet").addEventListener("click", ()=>{
   S.provider=$("providerSel").value; S.keys[S.provider]=$("keyInput").value.trim();
   S.models[S.provider]=$("modelInput").value.trim(); S.bases[S.provider]=$("baseInput").value.trim();
   S.voice=$("voiceSwitch").getAttribute("aria-checked")==="true";
+  S.persona=$("personaInput").value.trim()||DEFAULT_PERSONA;
   save(); $("providerPill").textContent=cur().name; $("sheet").classList.remove("show");
   push("sys", S.keys[S.provider]? cur().name+" saved. AI is enabled." : cur().name+" saved. Add a key to enable AI.");
 });
