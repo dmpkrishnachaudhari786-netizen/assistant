@@ -121,6 +121,7 @@ textarea{width:100%;background:#0b1220;border:1px solid var(--border);color:var(
       <option value="sarvam">Sarvam AI</option>
       <option value="deepseek">DeepSeek</option>
       <option value="kimi">Kimi (Moonshot)</option>
+      <option value="claude">Claude (Anthropic)</option>
     </select>
     <label for="keyInput">API key</label>
     <input id="keyInput" type="password" placeholder="paste your key" autocomplete="off">
@@ -147,6 +148,7 @@ const PROVIDERS = {
   sarvam:   { name:"Sarvam AI",kind:"openai", base:"https://api.sarvam.ai/v1", model:"sarvam-m" },
   deepseek: { name:"DeepSeek", kind:"openai", base:"https://api.deepseek.com/v1", model:"deepseek-chat" },
   kimi:     { name:"Kimi",     kind:"openai", base:"https://api.moonshot.ai/v1", model:"moonshot-v1-8k" },
+  claude:   { name:"Claude",   kind:"anthropic", base:"https://api.anthropic.com/v1", model:"claude-sonnet-4-5" },
 };
 const DEFAULT_PERSONA = "You are a conversational AI with this personality: 50% savage roast, 20% dark humour, 15% chill friend, 15% philosopher. Talk naturally - never robotic or formal. Be chill, confident, witty, sarcastic, unpredictable, sometimes brutally honest, but never toxic or cruel. Roast the user's habits and contradictions (personalised, not generic) to make them laugh and give a reality check - never to humiliate them. Use clever, intelligent dark humour (irony, existential jokes, tech / school / adult-life absurdity) - cleverness over shock, never graphic. When asked about life, success, failure, friendship, time, ambition, loneliness or discipline, go deeper than quotes: bring psychology, philosophy, human nature, logic and practical reality, and use paradoxes or thought experiments. Pattern: ROAST -> INSIGHT -> SOLUTION. If the user roasts you, counter-roast cleverly; never get defensive. Do not force a roast into every reply - vary the tone (serious, philosophical, savage, wholesome, absurd). Zero-bullshit honesty: if the user is wrong or the idea is bad, say so plainly, but never confuse honesty with insult. Reply in the user's language (Hindi/Hinglish in, same out). Be confident when sure; clearly say so when unsure. Signature vibe: laughter, a roast, and something to think about.";
 let S = { provider:"gemini", keys:{}, models:{}, bases:{}, voice:false, persona:DEFAULT_PERSONA,
@@ -200,6 +202,20 @@ async function callOpenAI(text,img){
   if(!res.ok) throw new Error(cur().name+" error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
   const d=await res.json(); return d?.choices?.[0]?.message?.content?.trim()||"(no reply)";
 }
+async function callAnthropic(text,img){
+  const content=[];
+  if(img) content.push({type:"image",source:{type:"base64",media_type:img.mime,data:b64(img.dataUrl)}});
+  content.push({type:"text",text:text||"Describe this image."});
+  const res=await fetch(curBase()+"/messages",{method:"POST",headers:{
+      "Content-Type":"application/json",
+      "x-api-key":curKey(),
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:curModel(),max_tokens:1024,system:S.persona||"",messages:[{role:"user",content}]})});
+  if(!res.ok) throw new Error("Claude error "+res.status+" — "+(await res.text().catch(()=>"")).slice(0,140));
+  const d=await res.json();
+  return (d?.content||[]).map(c=>c.text||"").join("").trim()||"(no reply)";
+}
 async function generateImage(prompt){
   const url=curBase()+"/models/"+encodeURIComponent(curModel())+":generateContent?key="+encodeURIComponent(curKey());
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
@@ -220,7 +236,7 @@ async function send(){
   try{
     if(!curKey()){ t.text="⚠️ Add your "+cur().name+" API key in Settings to enable AI replies."; save(); }
     else if(imageMode){ const url=await generateImage(text); t.text="Here is your image:"; t.img=url; save(); renderChat(); }
-    else { const reply=cur().kind==="gemini"?await callGemini(text,img):await callOpenAI(text,img); t.text=reply; speak(reply); save(); }
+    else { const k=cur().kind; const reply = k==="gemini" ? await callGemini(text,img) : (k==="anthropic" ? await callAnthropic(text,img) : await callOpenAI(text,img)); t.text=reply; speak(reply); save(); }
   }catch(e){ t.text="⚠️ "+e.message; save(); }
   finally{ $("sendBtn").disabled=false; renderChat(); }
 }
